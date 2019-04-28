@@ -3,7 +3,7 @@
 #include <functional>
 #include <unordered_map>
 
-#include "buffer.h"
+#include "stream_buffer.h"
 
 struct sockaddr_in6;
 class FastCGIRequest;
@@ -20,12 +20,10 @@ class FastCGIConn {
 	void WriteEnd(uint16_t request_id);
 
   private:
-  	void ParseBuf();
-
   	const int sock_;
   	std::function<void(std::unique_ptr<FastCGIRequest>)> callback_;
 
-	Buffer buf_;
+	StreamBuffer buf_;
 
 	std::unique_ptr<FastCGIRequest> request_;
 };

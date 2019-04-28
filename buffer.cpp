@@ -23,14 +23,6 @@ bool ConstBuffer::Discard(size_t len) {
 	return true;
 }
 
-void ConstBuffer::ResetRead() {
-	start_ = commit_;
-}
-
-void ConstBuffer::Commit() {
-	commit_ = start_;
-}
-
 
 Buffer::Buffer(char *buf, size_t size, size_t len)
 		: ConstBuffer(buf, size),
@@ -57,12 +49,11 @@ void Buffer::Wrote(size_t len) {
 	len_ += len;
 }
 
-void Buffer::Consume() {
-	if (commit_ == 0) {
+void Buffer::Commit() {
+	if (start_ == 0) {
 		return;
 	}
-	memmove(buf_, &buf_[commit_], len_ - commit_);
-	len_ -= commit_;
-	start_ -= commit_;
-	commit_ = 0;
+	memmove(buf_, &buf_[start_], len_ - start_);
+	len_ -= start_;
+	start_ = 0;
 }
