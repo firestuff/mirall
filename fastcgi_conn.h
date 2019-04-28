@@ -17,7 +17,7 @@ class FastCGIConn {
 
 	void WriteBlock(uint8_t type, uint16_t request_id, const std::vector<iovec>& vecs);
 	void WriteOutput(uint16_t request_id, const std::vector<iovec>& vecs);
-	void WriteEnd(uint16_t request_id, uint8_t status);
+	void WriteEnd(uint16_t request_id);
 
   private:
   	void ParseBuf();

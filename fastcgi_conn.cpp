@@ -36,13 +36,9 @@ struct fcgi_begin_request {
 };
 
 struct fcgi_end_request {
-  private:
-	uint32_t app_status_;
-  public:
+	uint32_t app_status = htonl(0); // network byte order
 	uint8_t protocol_status;
 	uint8_t reserved[3] = {};
-
-	void SetAppStatus(uint32_t app_status) { app_status_ = htonl(app_status); }
 };
 
 struct fcgi_param_header {
@@ -116,9 +112,8 @@ void FastCGIConn::WriteOutput(uint16_t request_id, const std::vector<iovec>& vec
 	WriteBlock(6, request_id, vecs);
 }
 
-void FastCGIConn::WriteEnd(uint16_t request_id, uint8_t status) {
+void FastCGIConn::WriteEnd(uint16_t request_id) {
 	fcgi_end_request end;
-	end.SetAppStatus(status);
 
 	std::vector<iovec> vecs;
 	vecs.push_back(iovec{

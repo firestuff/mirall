@@ -64,5 +64,5 @@ void FastCGIRequest::Write(const std::vector<std::pair<std::string_view, std::st
 }
 
 void FastCGIRequest::WriteEnd() {
-	conn_->WriteEnd(request_id_, 0);
+	conn_->WriteEnd(request_id_);
 }
