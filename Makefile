@@ -1,8 +1,8 @@
-mirall: Makefile mirall.o fastcgi.o fastcgi_conn.o buffer.o
-	g++ -std=gnu++2a -o mirall mirall.o fastcgi.o fastcgi_conn.o buffer.o -lgflags -lglog -lpthread
+example_simple: example_simple.o fastcgi.o fastcgi_conn.o fastcgi_request.o buffer.o
+	g++ -std=gnu++2a -o example_simple example_simple.o fastcgi.o fastcgi_conn.o fastcgi_request.o buffer.o -lgflags -lglog -lpthread
 
 clean:
-	rm --force mirall *.o
+	rm --force exmaple_simple *.o
 
-.cpp.o: Makefile *.h
+.cpp.o:
 	g++ -std=gnu++2a -o $@ -c $<

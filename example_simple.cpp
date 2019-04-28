@@ -9,6 +9,10 @@ int main(int argc, char *argv[]) {
 	google::InitGoogleLogging(argv[0]);
 	gflags::ParseCommandLineFlags(&argc, &argv, true);
 
-	FastCGIServer server(FLAGS_port);
+	FastCGIServer server(FLAGS_port, [](std::unique_ptr<FastCGIRequest> request) {
+		LOG(INFO) << "request from " << request->GetParam("REMOTE_ADDR");
+		request->Write({{"Content-Type", "text/plain"}}, {"Hello world"});
+		request->WriteEnd();
+	});
 	server.Serve();
 }

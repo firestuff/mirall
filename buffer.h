@@ -7,9 +7,9 @@ class ConstBuffer {
   public:
 	ConstBuffer(const char *buf, size_t len);
 
-	size_t ReadMaxLen() const;
-	const char *Read(size_t len);
-	template<class T> const T *ReadObj();
+	[[nodiscard]] size_t ReadMaxLen() const;
+	[[nodiscard]] const char *Read(size_t len);
+	template<class T> [[nodiscard]] const T *ReadObj();
 
 	bool Discard(size_t len); // like Read() but don't use the result
 	void ResetRead(); // next read from last commit
@@ -28,8 +28,8 @@ class Buffer : public ConstBuffer {
 	Buffer(char *buf, size_t size, size_t len);
   	Buffer(size_t size);
 
-	char *WritePtr();
-	size_t WriteMaxLen() const;
+	[[nodiscard]] char *WritePtr();
+	[[nodiscard]] size_t WriteMaxLen() const;
 	void Wrote(size_t len);
 
 	void Consume(); // discard up to last commit

@@ -19,7 +19,7 @@ bool ConstBuffer::Discard(size_t len) {
 	if (len > ReadMaxLen()) {
 		return false;
 	}
-	Read(len);
+	static_cast<void>(Read(len));
 	return true;
 }
 
@@ -40,7 +40,9 @@ Buffer::Buffer(char *buf, size_t size, size_t len)
 }
 
 Buffer::Buffer(size_t size)
-		: Buffer((own_buf_.reset(new char[size]), own_buf_.get()), size, 0) {}
+		: Buffer(new char[size], size, 0) {
+	own_buf_.reset(buf_);
+}
 
 char *Buffer::WritePtr() {
 	return &buf_[len_];
