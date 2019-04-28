@@ -3,7 +3,17 @@
 #include "fastcgi_request.h"
 
 #include "fastcgi_conn.h"
-#include "fastcgi_parse.h"
+
+namespace {
+
+template<class T> void AppendVec(const T& obj, std::vector<iovec>* vec) {
+	vec->push_back(iovec{
+		.iov_base = (void*)(&obj),
+		.iov_len = sizeof(obj),
+	});
+}
+
+} // namespace
 
 FastCGIRequest::FastCGIRequest(uint16_t request_id, FastCGIConn* conn)
 		: request_id_(request_id),
@@ -23,7 +33,7 @@ const std::string& FastCGIRequest::GetParam(const std::string& key) {
 }
 
 void FastCGIRequest::WriteHeader(const std::string_view& name, const std::string_view& value) {
-	CHECK(!body_sent_);
+	CHECK(!body_written_);
 	CHECK(out_buf_.Write(name));
 	CHECK(out_buf_.Write(": "));
 	CHECK(out_buf_.Write(value));
@@ -31,38 +41,55 @@ void FastCGIRequest::WriteHeader(const std::string_view& name, const std::string
 }
 
 void FastCGIRequest::WriteBody(const std::string_view& body) {
-	if (!body_sent_) {
+	if (!body_written_) {
 		CHECK(out_buf_.Write("\n"));
-		body_sent_ = true;
+		body_written_ = true;
 	}
 	// TODO: make this able to span multiple packets
 	CHECK(out_buf_.Write(body));
 }
 
-void FastCGIRequest::End() {
-	const auto output_len = out_buf_.ReadMaxLen();
+void FastCGIRequest::Flush() {
+	std::vector<iovec> vecs;
 
-	FastCGIHeader output_header(6, request_id_, output_len);
+	auto header = OutputHeader();
+	AppendVec(header, &vecs);
+
+	vecs.push_back(OutputVec());
+
+	conn_->Write(vecs);
+	out_buf_.Commit();
+}
+
+void FastCGIRequest::End() {
+	// Fully empty response not allowed
+	WriteBody("");
+
+	std::vector<iovec> vecs;
+
+	// Must be outside if block, so it lives through Write() below
+	auto output_header = OutputHeader();
+	if (output_header.ContentLength()) {
+		AppendVec(output_header, &vecs);
+		vecs.push_back(OutputVec());
+	}
+
 	FastCGIEndRequest end;
 	FastCGIHeader end_header(3, request_id_, sizeof(end));
+	AppendVec(end_header, &vecs);
+	AppendVec(end, &vecs);
 
-	std::vector<iovec> vecs{
-		iovec{
-			.iov_base = &output_header,
-			.iov_len = sizeof(output_header),
-		},
-		iovec{
-			.iov_base = (void *)(CHECK_NOTNULL(out_buf_.Read(output_len))),
-			.iov_len = output_len,
-		},
-		{
-			.iov_base = &end_header,
-			.iov_len = sizeof(end_header),
-		},
-		{
-			.iov_base = &end,
-			.iov_len = sizeof(end),
-		},
-	};
 	conn_->Write(vecs);
+}
+
+iovec FastCGIRequest::OutputVec() {
+	const auto output_len = out_buf_.ReadMaxLen();
+	return iovec{
+		.iov_base = (void *)(CHECK_NOTNULL(out_buf_.Read(output_len))),
+		.iov_len = output_len,
+	};
+}
+
+FastCGIHeader FastCGIRequest::OutputHeader() {
+	return FastCGIHeader(6, request_id_, out_buf_.ReadMaxLen());
 }

@@ -3,6 +3,7 @@
 #include <unordered_map>
 
 #include "buffer.h"
+#include "fastcgi_parse.h"
 
 class FastCGIConn;
 
@@ -21,6 +22,9 @@ class FastCGIRequest {
 	void End();
 
   private:
+	FastCGIHeader OutputHeader();
+	iovec OutputVec();
+
 	const uint16_t request_id_;
 	FastCGIConn *conn_;
 
@@ -28,5 +32,5 @@ class FastCGIRequest {
 	std::string in_;
 
 	Buffer out_buf_;
-	bool body_sent_ = false;
+	bool body_written_ = false;
 };
