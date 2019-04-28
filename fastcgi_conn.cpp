@@ -4,58 +4,13 @@
 
 #include "fastcgi_conn.h"
 
+#include "fastcgi_parse.h"
 #include "fastcgi_request.h"
-
-namespace {
-
-struct fcgi_header {
-	uint8_t version;
-	uint8_t type;
-  private:
-	uint16_t request_id_; // network byte order
-	uint16_t content_length_; // network byte order
-  public:
-	uint8_t padding_length = 0;
-	uint8_t reserved = 0;
-
-	uint16_t RequestId() const { return ntohs(request_id_); }
-	uint16_t ContentLength() const { return ntohs(content_length_); }
-
-	void SetRequestId(uint16_t request_id) { request_id_ = htons(request_id); }
-	void SetContentLength(uint16_t content_length) { content_length_ = htons(content_length); }
-};
-
-struct fcgi_begin_request {
-  private:
-	uint16_t role_; // network byte order
-  public:
-	uint8_t flags;
-	uint8_t reserved[5];
-
-	uint16_t Role() const { return ntohs(role_); }
-};
-
-struct fcgi_end_request {
-	uint32_t app_status = htonl(0); // network byte order
-	uint8_t protocol_status;
-	uint8_t reserved[3] = {};
-};
-
-struct fcgi_param_header {
-	uint8_t key_length;
-	uint8_t value_length;
-};
-
-constexpr auto fcgi_max_content_len = 65535;
-constexpr auto fcgi_max_padding_len = 255;
-constexpr auto fcgi_max_record_len = sizeof(fcgi_header) + fcgi_max_content_len + fcgi_max_padding_len;
-
-} // namespace
 
 FastCGIConn::FastCGIConn(int sock, const sockaddr_in6& client_addr, const std::function<void(std::unique_ptr<FastCGIRequest>)>& callback)
 		: sock_(sock),
 		  callback_(callback),
-		  buf_(sock, fcgi_max_record_len) {
+		  buf_(sock, fastcgi_max_record_len) {
 	char client_addr_str[INET6_ADDRSTRLEN];
 	PCHECK(inet_ntop(AF_INET6, &client_addr.sin6_addr, client_addr_str, sizeof(client_addr_str)));
 
@@ -71,7 +26,7 @@ void FastCGIConn::WriteBlock(uint8_t type, uint16_t request_id, const std::vecto
 	std::vector<iovec> out_vecs;
 	out_vecs.reserve(vecs.size() + 1);
 
-	fcgi_header header;
+	FastCGIHeader header;
 	header.version = 1;
 	header.type = type;
 	header.SetRequestId(request_id);
@@ -97,7 +52,7 @@ void FastCGIConn::WriteOutput(uint16_t request_id, const std::vector<iovec>& vec
 }
 
 void FastCGIConn::WriteEnd(uint16_t request_id) {
-	fcgi_end_request end;
+	FastCGIEndRequest end;
 
 	std::vector<iovec> vecs;
 	vecs.push_back(iovec{
@@ -109,7 +64,7 @@ void FastCGIConn::WriteEnd(uint16_t request_id) {
 
 void FastCGIConn::Serve() {
 	while (true) {
-		const auto *header = buf_.ReadObj<fcgi_header>();
+		const auto *header = buf_.ReadObj<FastCGIHeader>();
 		if (!header) {
 			LOG(INFO) << "readobj failed";
 			break;
@@ -123,8 +78,8 @@ void FastCGIConn::Serve() {
 		switch (header->type) {
 		  case 1:
 		  	{
-				CHECK_EQ(header->ContentLength(), sizeof(fcgi_begin_request));
-				const auto *begin_request = CHECK_NOTNULL(buf_.ReadObj<fcgi_begin_request>());
+				CHECK_EQ(header->ContentLength(), sizeof(FastCGIBeginRequest));
+				const auto *begin_request = CHECK_NOTNULL(buf_.ReadObj<FastCGIBeginRequest>());
 				CHECK_EQ(begin_request->Role(), 1);
 
 				request_.reset(new FastCGIRequest(header->RequestId(), this));
@@ -135,7 +90,7 @@ void FastCGIConn::Serve() {
 		    {
 				ConstBuffer param_buf(buf_.Read(header->ContentLength()), header->ContentLength());
 				while (param_buf.ReadMaxLen() > 0) {
-					const auto *param_header = param_buf.ReadObj<fcgi_param_header>();
+					const auto *param_header = param_buf.ReadObj<FastCGIParamHeader>();
 					std::string_view key(param_buf.Read(param_header->key_length), param_header->key_length);
 					std::string_view value(param_buf.Read(param_header->value_length), param_header->value_length);
 					request_->AddParam(key, value);
