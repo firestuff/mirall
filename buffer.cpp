@@ -44,6 +44,15 @@ size_t Buffer::WriteMaxLen() const {
 	return size_ - len_;
 }
 
+bool Buffer::Write(const std::string_view& str) {
+	if (WriteMaxLen() < str.size()) {
+		return false;
+	}
+	memcpy(WritePtr(), str.data(), str.size());
+	Wrote(str.size());
+	return true;
+}
+
 void Buffer::Wrote(size_t len) {
 	CHECK_LE(len, WriteMaxLen());
 	len_ += len;

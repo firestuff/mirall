@@ -2,6 +2,8 @@
 
 #include <unordered_map>
 
+#include "buffer.h"
+
 class FastCGIConn;
 
 class FastCGIRequest {
@@ -13,8 +15,10 @@ class FastCGIRequest {
 
 	const std::string& GetParam(const std::string& key);
 
-	void Write(const std::vector<std::pair<std::string_view, std::string_view>>& headers, const std::vector<std::string_view>& body);
-	void WriteEnd();
+	void WriteHeader(const std::string_view& name, const std::string_view& value);
+	void WriteBody(const std::string_view& body);
+	void Flush();
+	void End();
 
   private:
 	const uint16_t request_id_;
@@ -22,5 +26,7 @@ class FastCGIRequest {
 
 	std::unordered_map<std::string, std::string> params_;
 	std::string in_;
+
+	Buffer out_buf_;
 	bool body_sent_ = false;
 };

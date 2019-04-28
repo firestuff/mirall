@@ -10,8 +10,9 @@ int main(int argc, char *argv[]) {
 	gflags::ParseCommandLineFlags(&argc, &argv, true);
 
 	FastCGIServer server(FLAGS_port, [](std::unique_ptr<FastCGIRequest> request) {
-		request->Write({{"Content-Type", "text/plain"}}, {"Hello world"});
-		request->WriteEnd();
+		request->WriteHeader("Content-Type", "text/plain");
+		request->WriteBody("Hello world");
+		request->End();
 	});
 	server.Serve();
 }

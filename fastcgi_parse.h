@@ -1,5 +1,7 @@
 #pragma once
 
+#include <arpa/inet.h>
+
 struct FastCGIHeader {
 	uint8_t version;
 	uint8_t type;

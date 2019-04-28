@@ -22,44 +22,12 @@ FastCGIConn::~FastCGIConn() {
 	LOG(INFO) << "connection closed";
 }
 
-void FastCGIConn::WriteBlock(uint8_t type, uint16_t request_id, const std::vector<iovec>& vecs) {
-	std::vector<iovec> out_vecs;
-	out_vecs.reserve(vecs.size() + 1);
-
-	FastCGIHeader header;
-	header.version = 1;
-	header.type = type;
-	header.SetRequestId(request_id);
-	uint16_t content_length = 0;
-	for (auto& vec : vecs) {
-		content_length += vec.iov_len;
+void FastCGIConn::Write(const std::vector<iovec>& vecs) {
+	size_t total_size = 0;
+	for (const auto& vec : vecs) {
+		total_size += vec.iov_len;
 	}
-	header.SetContentLength(content_length);
-	out_vecs.push_back(iovec{
-		.iov_base = &header,
-		.iov_len = sizeof(header),
-	});
-
-	for (auto& vec : vecs) {
-		out_vecs.push_back(vec);
-	}
-
-	CHECK_EQ(writev(sock_, out_vecs.data(), out_vecs.size()), content_length + sizeof(header));
-}
-
-void FastCGIConn::WriteOutput(uint16_t request_id, const std::vector<iovec>& vecs) {
-	WriteBlock(6, request_id, vecs);
-}
-
-void FastCGIConn::WriteEnd(uint16_t request_id) {
-	FastCGIEndRequest end;
-
-	std::vector<iovec> vecs;
-	vecs.push_back(iovec{
-		.iov_base = &end,
-		.iov_len = sizeof(end),
-	});
-	WriteBlock(3, request_id, vecs);
+	CHECK_EQ(writev(sock_, vecs.data(), vecs.size()), total_size);
 }
 
 void FastCGIConn::Serve() {

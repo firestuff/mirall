@@ -26,6 +26,7 @@ class Buffer : public ConstBuffer {
 
 	[[nodiscard]] char *WritePtr();
 	[[nodiscard]] size_t WriteMaxLen() const;
+	bool Write(const std::string_view& str);
 	void Wrote(size_t len);
 
 	void Commit(); // commit read position
