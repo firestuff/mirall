@@ -21,6 +21,8 @@ class FastCGIConn {
   	const int sock_;
   	std::function<void(std::unique_ptr<FastCGIRequest>)> callback_;
 
+	uint64_t requests_ = 0;
+
 	StreamBuffer buf_;
 
 	std::unique_ptr<FastCGIRequest> request_;

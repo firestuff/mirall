@@ -11,6 +11,8 @@ class FastCGIRequest {
   public:
     FastCGIRequest(uint16_t request_id, FastCGIConn *conn);
 
+	uint16_t RequestId();
+
 	void AddParam(const std::string_view& key, const std::string_view& value);
 	void AddIn(const std::string_view& in);
 

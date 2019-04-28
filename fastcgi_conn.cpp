@@ -19,7 +19,7 @@ FastCGIConn::FastCGIConn(int sock, const sockaddr_in6& client_addr, const std::f
 
 FastCGIConn::~FastCGIConn() {
 	PCHECK(close(sock_) == 0);
-	LOG(INFO) << "connection closed";
+	LOG(INFO) << "connection closed (handled " << requests_ << " requests)";
 }
 
 void FastCGIConn::Write(const std::vector<iovec>& vecs) {
@@ -34,7 +34,6 @@ void FastCGIConn::Serve() {
 	while (true) {
 		const auto *header = buf_.ReadObj<FastCGIHeader>();
 		if (!header) {
-			LOG(INFO) << "readobj failed";
 			break;
 		}
 
@@ -56,6 +55,7 @@ void FastCGIConn::Serve() {
 
 		  case 4:
 		    {
+				CHECK_EQ(header->RequestId(), request_->RequestId());
 				ConstBuffer param_buf(buf_.Read(header->ContentLength()), header->ContentLength());
 				while (param_buf.ReadMaxLen() > 0) {
 					const auto *param_header = param_buf.ReadObj<FastCGIParamHeader>();
@@ -68,8 +68,10 @@ void FastCGIConn::Serve() {
 
 		  case 5:
 		  	{
+				CHECK_EQ(header->RequestId(), request_->RequestId());
 				if (header->ContentLength() == 0) {
 					// Magic signal for completed request (mirrors the HTTP/1.1 protocol)
+					requests_++;
 					callback_(std::move(request_));
 				} else {
 					std::string_view in(buf_.Read(header->ContentLength()), header->ContentLength());

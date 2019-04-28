@@ -20,6 +20,10 @@ FastCGIRequest::FastCGIRequest(uint16_t request_id, FastCGIConn* conn)
 		  conn_(conn),
 		  out_buf_(fastcgi_max_record_len) {}
 
+uint16_t FastCGIRequest::RequestId() {
+	return request_id_;
+}
+
 void FastCGIRequest::AddParam(const std::string_view& key, const std::string_view& value) {
 	params_.try_emplace(std::string(key), std::string(value));
 }
