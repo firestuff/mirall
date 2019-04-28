@@ -40,21 +40,11 @@ void FastCGIRequest::WriteBody(const std::string_view& body) {
 }
 
 void FastCGIRequest::End() {
-	FastCGIHeader output_header;
-	FastCGIHeader end_header;
-	FastCGIEndRequest end;
-
 	const auto output_len = out_buf_.ReadMaxLen();
 
-	output_header.version = 1;
-	output_header.type = 6;
-	output_header.SetRequestId(request_id_);
-	output_header.SetContentLength(output_len);
-
-	end_header.version = 1;
-	end_header.type = 3;
-	end_header.SetRequestId(request_id_);
-	end_header.SetContentLength(sizeof(end));
+	FastCGIHeader output_header(6, request_id_, output_len);
+	FastCGIEndRequest end;
+	FastCGIHeader end_header(3, request_id_, sizeof(end));
 
 	std::vector<iovec> vecs{
 		iovec{

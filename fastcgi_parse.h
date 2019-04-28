@@ -3,7 +3,13 @@
 #include <arpa/inet.h>
 
 struct FastCGIHeader {
-	uint8_t version;
+	FastCGIHeader(uint8_t type_in, uint16_t request_id, uint16_t content_length)
+			: type(type_in) {
+		SetRequestId(request_id);
+		SetContentLength(content_length);
+	}
+
+	uint8_t version = 1;
 	uint8_t type;
   private:
 	uint16_t request_id_; // network byte order
