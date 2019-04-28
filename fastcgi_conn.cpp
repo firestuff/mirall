@@ -100,10 +100,10 @@ void FastCGIConn::WriteBlock(uint8_t type, uint16_t request_id, const std::vecto
 		content_length += vec.iov_len;
 	}
 	header.SetContentLength(content_length);
-	out_vecs.push_back(std::move(iovec{
+	out_vecs.push_back(iovec{
 		.iov_base = &header,
 		.iov_len = sizeof(header),
-	}));
+	});
 
 	for (auto& vec : vecs) {
 		out_vecs.push_back(vec);
@@ -121,10 +121,10 @@ void FastCGIConn::WriteEnd(uint16_t request_id, uint8_t status) {
 	end.SetAppStatus(status);
 
 	std::vector<iovec> vecs;
-	vecs.push_back(std::move(iovec{
+	vecs.push_back(iovec{
 		.iov_base = &end,
 		.iov_len = sizeof(end),
-	}));
+	});
 	WriteBlock(3, request_id, vecs);
 }
 
