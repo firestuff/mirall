@@ -20,8 +20,8 @@ class FastCGIRequest {
 
 	void WriteHeader(const std::string_view& name, const std::string_view& value);
 	void WriteBody(const std::string_view& body);
-	void Flush();
-	void End();
+	[[nodiscard]] bool Flush();
+	bool End();
 
   private:
 	FastCGIHeader OutputHeader();

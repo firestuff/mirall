@@ -9,5 +9,8 @@ class SSEServer {
 	void Serve();
 
   private:
-  	FastCGIServer fastcgi_server_;
+	void OnRequest(std::unique_ptr<FastCGIRequest> request);
+
+	std::function<void(std::unique_ptr<SSEStream>)> callback_;
+	FastCGIServer fastcgi_server_;
 };

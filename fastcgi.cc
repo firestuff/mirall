@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <signal.h>
 #include <sys/socket.h>
 #include <thread>
 
@@ -9,6 +10,8 @@
 FastCGIServer::FastCGIServer(int port, const std::function<void(std::unique_ptr<FastCGIRequest>)>& callback)
 		: callback_(callback) {
 	LOG(INFO) << "listening on [::1]:" << port;
+
+	signal(SIGPIPE, SIG_IGN);
 
 	listen_sock_ = socket(AF_INET6, SOCK_STREAM, 0);
 	PCHECK(listen_sock_ >= 0) << "socket()";

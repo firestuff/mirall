@@ -33,7 +33,12 @@ void FastCGIRequest::AddIn(const std::string_view& in) {
 }
 
 const std::string& FastCGIRequest::GetParam(const std::string& key) {
-	return params_.at(key);
+	auto iter = params_.find(key);
+	if (iter == params_.end()) {
+		static const std::string none;
+		return none;
+	}
+	return iter->second;
 }
 
 void FastCGIRequest::WriteHeader(const std::string_view& name, const std::string_view& value) {
@@ -53,7 +58,7 @@ void FastCGIRequest::WriteBody(const std::string_view& body) {
 	CHECK(out_buf_.Write(body));
 }
 
-void FastCGIRequest::Flush() {
+bool FastCGIRequest::Flush() {
 	std::vector<iovec> vecs;
 
 	auto header = OutputHeader();
@@ -61,11 +66,14 @@ void FastCGIRequest::Flush() {
 
 	vecs.push_back(OutputVec());
 
-	conn_->Write(vecs);
+	if (!conn_->Write(vecs)) {
+		return false;
+	}
 	out_buf_.Commit();
+	return true;
 }
 
-void FastCGIRequest::End() {
+bool FastCGIRequest::End() {
 	// Fully empty response not allowed
 	WriteBody("");
 
@@ -83,7 +91,7 @@ void FastCGIRequest::End() {
 	AppendVec(end_header, &vecs);
 	AppendVec(end, &vecs);
 
-	conn_->Write(vecs);
+	return conn_->Write(vecs);
 }
 
 iovec FastCGIRequest::OutputVec() {

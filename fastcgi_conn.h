@@ -15,7 +15,7 @@ class FastCGIConn {
 
 	void Serve();
 
-	void Write(const std::vector<iovec>& vecs);
+	[[nodiscard]] bool Write(const std::vector<iovec>& vecs);
 
   private:
   	const int sock_;

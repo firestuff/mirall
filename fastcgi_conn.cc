@@ -22,12 +22,12 @@ FastCGIConn::~FastCGIConn() {
 	LOG(INFO) << "connection closed (handled " << requests_ << " requests)";
 }
 
-void FastCGIConn::Write(const std::vector<iovec>& vecs) {
+bool FastCGIConn::Write(const std::vector<iovec>& vecs) {
 	size_t total_size = 0;
 	for (const auto& vec : vecs) {
 		total_size += vec.iov_len;
 	}
-	CHECK_EQ(writev(sock_, vecs.data(), vecs.size()), total_size);
+	return writev(sock_, vecs.data(), vecs.size()) == total_size;
 }
 
 void FastCGIConn::Serve() {

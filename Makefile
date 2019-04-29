@@ -1,6 +1,6 @@
 all: example_simple example_clock
 
-objects = sse.o fastcgi.o fastcgi_conn.o fastcgi_request.o fastcgi_parse.o stream_buffer.o buffer.o
+objects = sse.o sse_stream.o fastcgi.o fastcgi_conn.o fastcgi_request.o fastcgi_parse.o stream_buffer.o buffer.o
 
 example_simple: example_simple.o $(objects) Makefile
 	clang++ -std=gnu++2a -o example_simple example_simple.o $(objects) -lgflags -lglog -lpthread
