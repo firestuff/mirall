@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "stream_buffer.h"
 
@@ -10,7 +11,7 @@ class FastCGIRequest;
 
 class FastCGIConn {
   public:
-	FastCGIConn(int sock, const sockaddr_in6& client_addr, const std::function<void(std::unique_ptr<FastCGIRequest>)>& callback);
+	FastCGIConn(int sock, const sockaddr_in6& client_addr, const std::function<void(std::unique_ptr<FastCGIRequest>)>& callback, const std::unordered_set<std::string_view>& headers);
 	~FastCGIConn();
 
 	void Serve();
@@ -19,7 +20,8 @@ class FastCGIConn {
 
   private:
   	const int sock_;
-  	std::function<void(std::unique_ptr<FastCGIRequest>)> callback_;
+	const std::function<void(std::unique_ptr<FastCGIRequest>)>& callback_;
+	const std::unordered_set<std::string_view>& headers_;
 
 	uint64_t requests_ = 0;
 

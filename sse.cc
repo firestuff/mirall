@@ -2,7 +2,9 @@
 
 SSEServer::SSEServer(int port, const std::function<void(std::unique_ptr<SSEStream>)>& callback)
 		: callback_(callback),
-		  fastcgi_server_(port, [this](std::unique_ptr<FastCGIRequest> request) { OnRequest(std::move(request)); }) {}
+		  fastcgi_server_(port,
+		                  [this](std::unique_ptr<FastCGIRequest> request) { OnRequest(std::move(request)); },
+						  {"HTTP_ACCEPT"}) {}
 
 void SSEServer::Serve() {
 	fastcgi_server_.Serve();

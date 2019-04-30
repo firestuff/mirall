@@ -7,8 +7,9 @@
 #include "fastcgi.h"
 #include "fastcgi_conn.h"
 
-FastCGIServer::FastCGIServer(int port, const std::function<void(std::unique_ptr<FastCGIRequest>)>& callback)
-		: callback_(callback) {
+FastCGIServer::FastCGIServer(int port, const std::function<void(std::unique_ptr<FastCGIRequest>)>& callback, const std::unordered_set<std::string_view>& headers)
+		: callback_(callback),
+		  headers_(headers) {
 	LOG(INFO) << "listening on [::1]:" << port;
 
 	signal(SIGPIPE, SIG_IGN);
@@ -42,7 +43,7 @@ void FastCGIServer::Serve() {
 		PCHECK(client_sock >= 0) << "accept()";
 		CHECK_EQ(client_addr.sin6_family, AF_INET6);
 
-		auto *conn = new FastCGIConn(client_sock, client_addr, callback_);
+		auto *conn = new FastCGIConn(client_sock, client_addr, callback_, headers_);
 		std::thread thread([conn]() { conn->Serve(); });
 		thread.detach();
 	}

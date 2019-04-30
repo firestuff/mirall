@@ -7,9 +7,10 @@
 #include "fastcgi_parse.h"
 #include "fastcgi_request.h"
 
-FastCGIConn::FastCGIConn(int sock, const sockaddr_in6& client_addr, const std::function<void(std::unique_ptr<FastCGIRequest>)>& callback)
+FastCGIConn::FastCGIConn(int sock, const sockaddr_in6& client_addr, const std::function<void(std::unique_ptr<FastCGIRequest>)>& callback, const std::unordered_set<std::string_view>& headers)
 		: sock_(sock),
 		  callback_(callback),
+		  headers_(headers),
 		  buf_(sock, fastcgi_max_record_len) {
 	char client_addr_str[INET6_ADDRSTRLEN];
 	PCHECK(inet_ntop(AF_INET6, &client_addr.sin6_addr, client_addr_str, sizeof(client_addr_str)));
@@ -61,7 +62,9 @@ void FastCGIConn::Serve() {
 					const auto *param_header = param_buf.ReadObj<FastCGIParamHeader>();
 					std::string_view key(param_buf.Read(param_header->key_length), param_header->key_length);
 					std::string_view value(param_buf.Read(param_header->value_length), param_header->value_length);
-					request_->AddParam(key, value);
+					if (headers_.find(key) != headers_.end()) {
+						request_->AddParam(key, value);
+					}
 				}
 			}
 			break;
