@@ -62,8 +62,9 @@ void FastCGIServer::Serve() {
 				NewConn();
 			} else {
 				auto conn = static_cast<FastCGIConn*>(events[i].data.ptr);
-				if (!conn->Read()) {
-					PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, conn->Sock(), nullptr) == 0);
+				auto fd = conn->Read();
+				if (fd != -1) {
+					PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, fd, nullptr) == 0);
 					delete conn;
 				}
 			}

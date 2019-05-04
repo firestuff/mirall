@@ -31,9 +31,9 @@ bool FastCGIConn::Write(const std::vector<iovec>& vecs) {
 	return writev(sock_, vecs.data(), vecs.size()) == total_size;
 }
 
-bool FastCGIConn::Read() {
+int FastCGIConn::Read() {
 	if (!buf_.Refill()) {
-		return false;
+		return sock_;
 	}
 
 	while (true) {
@@ -102,9 +102,5 @@ bool FastCGIConn::Read() {
 	}
 
 	buf_.Consume();
-	return true;
-}
-
-int FastCGIConn::Sock() {
-	return sock_;
+	return -1;
 }

@@ -14,10 +14,8 @@ class FastCGIConn {
 	FastCGIConn(int sock, const sockaddr_in6& client_addr, const std::function<void(std::unique_ptr<FastCGIRequest>)>& callback, const std::unordered_set<std::string_view>& headers);
 	~FastCGIConn();
 
-	[[nodiscard]] bool Read();
+	[[nodiscard]] int Read();
 	[[nodiscard]] bool Write(const std::vector<iovec>& vecs);
-
-	[[nodiscard]] int Sock();
 
   private:
   	const int sock_;
