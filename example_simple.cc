@@ -4,6 +4,7 @@
 #include "fastcgi.h"
 
 DEFINE_int32(port, 9000, "TCP port to bind");
+DEFINE_int32(threads, 1, "Number of server threads");
 
 int main(int argc, char *argv[]) {
 	google::InitGoogleLogging(argv[0]);
@@ -13,6 +14,6 @@ int main(int argc, char *argv[]) {
 		request->WriteHeader("Content-Type", "text/plain");
 		request->WriteBody("Hello world");
 		request->End();
-	});
+	}, FLAGS_threads);
 	server.Serve();
 }
