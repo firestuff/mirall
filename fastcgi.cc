@@ -49,8 +49,9 @@ FastCGIServer::FastCGIServer(int port, const std::function<void(std::unique_ptr<
 
 void FastCGIServer::Serve() {
 	while (true) {
-		struct epoll_event events[256];
-		auto num_fd = epoll_wait(epoll_fd_, events, sizeof(events), -1);
+		constexpr auto max_events = 256;
+		struct epoll_event events[max_events];
+		auto num_fd = epoll_wait(epoll_fd_, events, max_events, -1);
 		if (num_fd == -1 && errno == EINTR) {
 			continue;
 		}

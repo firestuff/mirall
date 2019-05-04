@@ -35,7 +35,7 @@ class Buffer : public ConstBuffer {
 	void Consume(); // discard up to last commit
 
   protected:
-  	std::unique_ptr<char> own_buf_;
+	std::unique_ptr<char[]> own_buf_;
 	char *buf_;
 	const size_t size_;
 };
