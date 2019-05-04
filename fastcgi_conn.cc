@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/uio.h>
 
 #include "fastcgi_conn.h"
@@ -16,6 +17,9 @@ FastCGIConn::FastCGIConn(int sock, const sockaddr_in6& client_addr, const std::f
 	PCHECK(inet_ntop(AF_INET6, &client_addr.sin6_addr, client_addr_str, sizeof(client_addr_str)));
 
 	LOG(INFO) << "new connection: [" << client_addr_str << "]:" << ntohs(client_addr.sin6_port);
+
+	int flags = 1;
+	PCHECK(setsockopt(sock_, SOL_TCP, TCP_NODELAY, &flags, sizeof(flags)) == 0);
 }
 
 FastCGIConn::~FastCGIConn() {
