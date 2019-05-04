@@ -12,11 +12,14 @@ class ConstBuffer {
 	template<class T> [[nodiscard]] const T *ReadObj();
 
 	bool Discard(size_t len); // like Read() but don't use the result
+	void ResetRead(); // next read from last commit
+	void Commit(); // commit read position
 
   protected:
 	const char *const_buf_;
 	size_t len_;
 	size_t start_ = 0;
+	size_t commit_ = 0;
 };
 
 class Buffer : public ConstBuffer {
@@ -29,7 +32,7 @@ class Buffer : public ConstBuffer {
 	bool Write(const std::string_view& str);
 	void Wrote(size_t len);
 
-	void Commit(); // commit read position
+	void Consume(); // discard up to last commit
 
   protected:
   	std::unique_ptr<char> own_buf_;

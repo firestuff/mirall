@@ -1,8 +1,8 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <signal.h>
+#include <sys/epoll.h>
 #include <sys/socket.h>
-#include <thread>
 
 #include "fastcgi.h"
 #include "fastcgi_conn.h"
@@ -13,6 +13,9 @@ FastCGIServer::FastCGIServer(int port, const std::function<void(std::unique_ptr<
 	LOG(INFO) << "listening on [::1]:" << port;
 
 	signal(SIGPIPE, SIG_IGN);
+
+	epoll_fd_ = epoll_create1(0);
+	PCHECK(epoll_fd_ >= 0) << "epoll_create()";
 
 	listen_sock_ = socket(AF_INET6, SOCK_STREAM, 0);
 	PCHECK(listen_sock_ >= 0) << "socket()";
@@ -32,20 +35,58 @@ FastCGIServer::FastCGIServer(int port, const std::function<void(std::unique_ptr<
 	}
 
 	PCHECK(listen(listen_sock_, 128) == 0);
+
+	{
+		struct epoll_event ev{
+			.events = EPOLLIN,
+			.data = {
+				.ptr = nullptr,
+			},
+		};
+		PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, listen_sock_, &ev) == 0);
+	}
 }
 
 void FastCGIServer::Serve() {
 	while (true) {
-		sockaddr_in6 client_addr;
-		socklen_t client_addr_len = sizeof(client_addr);
+		struct epoll_event events[256];
+		auto num_fd = epoll_wait(epoll_fd_, events, sizeof(events), -1);
+		if (num_fd == -1 && errno == EINTR) {
+			continue;
+		}
+		PCHECK(num_fd > 0) << "epoll_wait()";
 
-		auto client_sock = accept(listen_sock_, (sockaddr*) &client_addr, &client_addr_len);
-		PCHECK(client_sock >= 0) << "accept()";
-		CHECK_EQ(client_addr.sin6_family, AF_INET6);
+		for (auto i = 0; i < num_fd; ++i) {
+			if (events[i].data.ptr == nullptr) {
+				NewConn();
+			} else {
+				auto conn = static_cast<FastCGIConn*>(events[i].data.ptr);
+				if (!conn->Read()) {
+					PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, conn->Sock(), nullptr) == 0);
+					delete conn;
+				}
+			}
+		}
+	}
+}
 
+void FastCGIServer::NewConn() {
+	sockaddr_in6 client_addr;
+	socklen_t client_addr_len = sizeof(client_addr);
+
+	auto client_sock = accept(listen_sock_, (sockaddr*) &client_addr, &client_addr_len);
+	PCHECK(client_sock >= 0) << "accept()";
+	CHECK_EQ(client_addr.sin6_family, AF_INET6);
+
+	{
 		auto *conn = new FastCGIConn(client_sock, client_addr, callback_, headers_);
-		std::thread thread([conn]() { conn->Serve(); });
-		thread.detach();
+		struct epoll_event ev{
+			.events = EPOLLIN,
+			.data = {
+				.ptr = conn,
+			},
+		};
+		PCHECK(epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, client_sock, &ev) == 0);
 	}
 }
 

@@ -31,16 +31,22 @@ bool FastCGIConn::Write(const std::vector<iovec>& vecs) {
 	return writev(sock_, vecs.data(), vecs.size()) == total_size;
 }
 
-void FastCGIConn::Serve() {
+bool FastCGIConn::Read() {
+	if (!buf_.Refill()) {
+		return false;
+	}
+
 	while (true) {
+		buf_.ResetRead();
+
 		const auto *header = buf_.ReadObj<FastCGIHeader>();
 		if (!header) {
 			break;
 		}
 
 		CHECK_EQ(header->version, 1);
-		if (!buf_.BufferAtLeast(header->ContentLength())) {
-			return;
+		if (buf_.ReadMaxLen() < header->ContentLength()) {
+			break;
 		}
 
 		switch (header->type) {
@@ -95,5 +101,10 @@ void FastCGIConn::Serve() {
 		buf_.Commit(); // we've acted on the bytes read so far
 	}
 
-	delete this;
+	buf_.Consume();
+	return true;
+}
+
+int FastCGIConn::Sock() {
+	return sock_;
 }

@@ -12,7 +12,10 @@ class FastCGIServer {
 	void Serve();
 
   private:
-	int listen_sock_;
+	void NewConn();
+
 	const std::function<void(std::unique_ptr<FastCGIRequest>)> callback_;
 	const std::unordered_set<std::string_view> headers_;
+	int epoll_fd_;
+	int listen_sock_;
 };
