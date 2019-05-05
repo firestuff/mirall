@@ -27,6 +27,9 @@ afl_int: fastcgi_conn_afl
 fastcgi_conn_afl: fastcgi_conn_afl.o $(objects)
 	$(FCGI_CXX) $(FCGI_CXXFLAGS) -o $@ $+ $(FCGI_LDLIBS)
 
-test: fastcgi_conn_afl
+test: test_fastcgi_conn
+
+test_fastcgi_conn: fastcgi_conn_afl
+	@echo "Running $$(ls afl_state/testcases | wc -l) tests"
 	for FILE in afl_state/testcases/*; do ./fastcgi_conn_afl < $$FILE; done
 	@printf '\033[0;32mALL TESTS PASSED\033[0m\n'
