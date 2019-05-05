@@ -9,7 +9,9 @@ size_t ConstBuffer::ReadMaxLen() const {
 }
 
 const char *ConstBuffer::Read(size_t len) {
-	CHECK_LE(len, ReadMaxLen());
+	if (ReadMaxLen() < len) {
+		return nullptr;
+	}
 	const auto *ret = &const_buf_[start_];
 	start_ += len;
 	return ret;

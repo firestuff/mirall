@@ -82,8 +82,25 @@ int FastCGIConn::Read() {
 				ConstBuffer param_buf(buf_.Read(header->ContentLength()), header->ContentLength());
 				while (param_buf.ReadMaxLen() > 0) {
 					const auto *param_header = param_buf.ReadObj<FastCGIParamHeader>();
-					std::string_view key(param_buf.Read(param_header->key_length), param_header->key_length);
-					std::string_view value(param_buf.Read(param_header->value_length), param_header->value_length);
+					if (!param_header) {
+						LOG(ERROR) << "FCGI_PARAMS missing header";
+						return sock_;
+					}
+
+					const auto *key_buf = param_buf.Read(param_header->key_length);
+					if (!key_buf) {
+						LOG(ERROR) << "FCGI_PARAMS missing key";
+						return sock_;
+					}
+					std::string_view key(key_buf, param_header->key_length);
+
+					const auto *value_buf = param_buf.Read(param_header->value_length);
+					if (!value_buf) {
+						LOG(ERROR) << "FCGI_PARAMS missing value";
+						return sock_;
+					}
+					std::string_view value(value_buf, param_header->value_length);
+
 					if (headers_.find(key) != headers_.end()) {
 						request_->AddParam(key, value);
 					}
