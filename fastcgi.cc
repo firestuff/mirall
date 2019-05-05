@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <signal.h>
 #include <sys/epoll.h>
 #include <sys/socket.h>
@@ -73,6 +74,9 @@ void FastCGIServer::NewConn(int listen_sock, int epoll_fd) {
 	auto client_sock = accept(listen_sock, (sockaddr*) &client_addr, &client_addr_len);
 	PCHECK(client_sock >= 0) << "accept()";
 	CHECK_EQ(client_addr.sin6_family, AF_INET6);
+
+	int flags = 1;
+	PCHECK(setsockopt(client_sock, SOL_TCP, TCP_NODELAY, &flags, sizeof(flags)) == 0);
 
 	{
 		auto *conn = new FastCGIConn(client_sock, client_addr, callback_, headers_);

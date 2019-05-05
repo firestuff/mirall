@@ -1,6 +1,5 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <sys/uio.h>
 
 #include "fastcgi_conn.h"
@@ -17,9 +16,6 @@ FastCGIConn::FastCGIConn(int sock, const sockaddr_in6& client_addr, const std::f
 	PCHECK(inet_ntop(AF_INET6, &client_addr.sin6_addr, client_addr_str, sizeof(client_addr_str)));
 
 	LOG(INFO) << "new connection: [" << client_addr_str << "]:" << ntohs(client_addr.sin6_port);
-
-	int flags = 1;
-	PCHECK(setsockopt(sock_, SOL_TCP, TCP_NODELAY, &flags, sizeof(flags)) == 0);
 }
 
 FastCGIConn::~FastCGIConn() {
@@ -28,7 +24,7 @@ FastCGIConn::~FastCGIConn() {
 }
 
 bool FastCGIConn::Write(const std::vector<iovec>& vecs) {
-	size_t total_size = 0;
+	ssize_t total_size = 0;
 	for (const auto& vec : vecs) {
 		total_size += vec.iov_len;
 	}
@@ -48,7 +44,11 @@ int FastCGIConn::Read() {
 			break;
 		}
 
-		CHECK_EQ(header->version, 1);
+		if (header->version != 1) {
+			LOG(ERROR) << "invalid FastCGI protocol version: " << header->version;
+			return sock_;
+		}
+
 		if (buf_.ReadMaxLen() < header->ContentLength()) {
 			break;
 		}
@@ -56,9 +56,17 @@ int FastCGIConn::Read() {
 		switch (header->type) {
 		  case 1:
 		  	{
-				CHECK_EQ(header->ContentLength(), sizeof(FastCGIBeginRequest));
+				if (header->ContentLength() != sizeof(FastCGIBeginRequest)) {
+					LOG(ERROR) << "FCGI_BeginRequestBody is the wrong length: " << header->ContentLength();
+					return sock_;
+				}
+
 				const auto *begin_request = CHECK_NOTNULL(buf_.ReadObj<FastCGIBeginRequest>());
-				CHECK_EQ(begin_request->Role(), 1);
+
+				if (begin_request->Role() != 1) {
+					LOG(ERROR) << "unsupported FastCGI role: " << begin_request->Role();
+					return sock_;
+				}
 
 				request_.reset(new FastCGIRequest(header->RequestId(), this));
 			}
@@ -66,7 +74,11 @@ int FastCGIConn::Read() {
 
 		  case 4:
 		    {
-				CHECK_EQ(header->RequestId(), request_->RequestId());
+				if (header->RequestId() != request_->RequestId()) {
+					LOG(ERROR) << "out of order FCGI_PARAMS record, or client is multiplexing requests (which we don't support)";
+					return sock_;
+				}
+
 				ConstBuffer param_buf(buf_.Read(header->ContentLength()), header->ContentLength());
 				while (param_buf.ReadMaxLen() > 0) {
 					const auto *param_header = param_buf.ReadObj<FastCGIParamHeader>();
@@ -81,7 +93,11 @@ int FastCGIConn::Read() {
 
 		  case 5:
 		  	{
-				CHECK_EQ(header->RequestId(), request_->RequestId());
+				if (header->RequestId() != request_->RequestId()) {
+					LOG(ERROR) << "out of order FCGI_STDIN record, or client is multiplexing requests (which we don't support)";
+					return sock_;
+				}
+
 				if (header->ContentLength() == 0) {
 					// Magic signal for completed request (mirrors the HTTP/1.1 protocol)
 					requests_++;
@@ -94,8 +110,8 @@ int FastCGIConn::Read() {
 			break;
 
 		  default:
-			CHECK(false) << "unknown record type: " << header->type;
-			break;
+			LOG(ERROR) << "unknown record type: " << header->type;
+			return sock_;
 		}
 
 		if (!buf_.Discard(header->padding_length)) {

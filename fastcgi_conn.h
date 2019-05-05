@@ -1,13 +1,12 @@
 #pragma once
 
 #include <functional>
+#include <sys/uio.h>
 #include <unordered_map>
 #include <unordered_set>
 
+#include "fastcgi_request.h"
 #include "stream_buffer.h"
-
-struct sockaddr_in6;
-class FastCGIRequest;
 
 class FastCGIConn {
   public:

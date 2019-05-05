@@ -1,4 +1,5 @@
 mirall
 example_clock
 example_simple
+fastcgi_conn_afl
 *.o

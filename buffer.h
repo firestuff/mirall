@@ -2,6 +2,7 @@
 
 #include <glog/logging.h>
 #include <memory>
+#include <string_view>
 
 class ConstBuffer {
   public:
