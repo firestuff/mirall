@@ -1,8 +1,10 @@
 #include "fastcgi_conn.h"
 
 int main(int argc, char* argv[]) {
-	setenv("GLOG_logtostderr", "1", true);
+	FLAGS_logtostderr = 1;
+	FLAGS_minloglevel = 3;
 	google::InitGoogleLogging(argv[0]);
+	gflags::ParseCommandLineFlags(&argc, &argv, true);
 
 	{
 		FastCGIConn conn(STDIN_FILENO, {}, [](std::unique_ptr<FastCGIRequest> req) { req->End(); }, {});
