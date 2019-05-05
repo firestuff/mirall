@@ -1,0 +1,3 @@
+[submodule "firesse"]
+	path = firesse
+	url = git@github.com:firestuff/firesse.git
