@@ -74,7 +74,7 @@ int FastCGIConn::Read() {
 
 		  case 4:
 		    {
-				if (header->RequestId() != request_->RequestId()) {
+				if (request_ == nullptr || header->RequestId() != request_->RequestId()) {
 					LOG(ERROR) << "out of order FCGI_PARAMS record, or client is multiplexing requests (which we don't support)";
 					return sock_;
 				}
@@ -93,7 +93,7 @@ int FastCGIConn::Read() {
 
 		  case 5:
 		  	{
-				if (header->RequestId() != request_->RequestId()) {
+				if (request_ == nullptr || header->RequestId() != request_->RequestId()) {
 					LOG(ERROR) << "out of order FCGI_STDIN record, or client is multiplexing requests (which we don't support)";
 					return sock_;
 				}
